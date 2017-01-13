@@ -1,12 +1,13 @@
 'use strict';
 var path = require('path');
-var yeoman = require('yeoman-generator');
+var Base = require('yeoman-generator').Base;
 var chalk = require('chalk');
+var dasherize = require('underscore.string/dasherize');
+var utils = require('./utils');
 
-var WidgetGenerator = yeoman.generators.Base.extend({
+var WidgetGenerator = Base.extend({
   askFor: function () {
     var done = this.async();
-    var dasherize = this._.dasherize;
 
     console.log(chalk.green('Welcome to the ArcGIS Web AppBuilder widget generator!'));
 
@@ -54,7 +55,6 @@ var WidgetGenerator = yeoman.generators.Base.extend({
       }
       // TODO: validate not empty string?
     },
-    // TODO: checkbox prompt for 2D/3D once the WAB supports 3D
     {
       type: 'checkbox',
       message: 'Which features would you like to include?',
@@ -82,32 +82,87 @@ var WidgetGenerator = yeoman.generators.Base.extend({
         }
       ],
       'default': [ 'inPanel', 'hasLocale', 'hasStyle', 'hasConfig', 'hasUIFile' ]
+    },
+    {
+      when: function (response) {
+        // only show this step if user answered TRUE to 'hasConfig'
+        return response.features.indexOf('hasConfig') > -1;
+      },
+      type: 'confirm',
+      message: 'Would you like a settings page?',
+      name: 'hasSettingPage'
+    },
+    {
+      when: function (response) {
+        // only show this step if user answered TRUE to 'hasSettingPage'
+        return response.hasSettingPage;
+      },
+      type: 'checkbox',
+      message: 'Which settings page features would you like to include?',
+      name: 'settingsFeatures',
+      choices: [
+        {
+          value: 'hasSettingUIFile',
+          name: 'Settings template (HTML) file'
+        },
+        {
+          value: 'hasSettingLocale',
+          name: 'Settings locale (i18n) file'
+        },
+        {
+          value: 'hasSettingStyle',
+          name: 'Settings style (CSS) file'
+        }
+      ],
+      'default': [ 'hasSettingUIFile', 'hasSettingLocale', 'hasSettingStyle' ]
+    }, {
+      name: 'jsVersion',
+      type: 'list',
+      message: 'Which JavaScript  syntax version would you like to develop in?',
+      choices: ['ES5', 'ES2015']
     }];
 
     this.prompt(prompts, function (props) {
       this.widgetName = props.widgetName;
       this.widgetTitle = props.widgetTitle;
       this.description = props.description;
-      // TODO: get from prompt once the WAB supports 3D
-      this.is2d = true;
-      this.is3d = false;
+
+      // properties that we need to get from the package json, if it exists:
+      this.author = utils.authorToString(utils.getPackageInfo('author'));
+      this.license = (utils.getPackageInfo('license') !== false ? utils.getPackageInfo('license') : '');
+
+      this.widgetsType = this.config.get('widgetsType');
+      this.is2d = (this.widgetsType === 'is2d');
+      this.is3d = (this.widgetsType === 'is3d');
+      if (this.is3d) {
+        this.platform = 'HTML3D';
+        this.wabVersion = '2.0beta';
+      } else {
+        this.platform = 'HTML';
+        this.wabVersion = '2.2';
+        this.is2d = true;
+      }
+
       this.baseClass = props.baseClass;
       this.inPanel = props.features.indexOf('inPanel') > -1;
       this.hasLocale = props.features.indexOf('hasLocale') > -1;
       this.hasStyle = props.features.indexOf('hasStyle') > -1;
       this.hasConfig = props.features.indexOf('hasConfig') > -1;
       this.hasUIFile = props.features.indexOf('hasUIFile') > -1;
+      this.jsVersion = props.jsVersion;
+      // settings
+      this.hasSettingPage = props.hasSettingPage;
+      this.hasSettingUIFile = this.hasSettingPage ? (props.settingsFeatures.indexOf('hasSettingUIFile') > -1) : false;
+      this.hasSettingLocale = this.hasSettingPage ? (props.settingsFeatures.indexOf('hasSettingLocale') > -1) : false;
+      this.hasSettingStyle = this.hasSettingPage ? (props.settingsFeatures.indexOf('hasSettingStyle') > -1) : false;
       this.needsManifestProps = (!this.inPanel || !this.hasLocale);
       done();
     }.bind(this));
   },
 
   files: function () {
-    // NOTE: this is needed b/c _Widget.html has ES6 style interpolation delimiters
-    // see: https://github.com/lodash/lodash/issues/399
-    this._.templateSettings.interpolate = /<%=([\s\S]+?)%>/g;
     var basePath = path.join('widgets', this.widgetName);
-    this.template('_Widget.js', path.join(basePath, 'Widget.js'));
+    this.template('_Widget_' + this.jsVersion + '.js', path.join(basePath, 'Widget.js'));
     if (this.hasUIFile) {
       this.template('_Widget.html', path.join(basePath, 'Widget.html'));
     }
@@ -122,7 +177,20 @@ var WidgetGenerator = yeoman.generators.Base.extend({
     }
     this.copy('images/icon.png', path.join(basePath, 'images/icon.png'));
     this.template('_manifest.json', path.join(basePath, 'manifest.json'));
-    // TODO: settings
+
+    // Settings:
+    if(this.hasSettingPage) {
+      this.template('setting/_Setting_' + this.jsVersion + '.js', path.join(basePath, 'setting/Setting.js'));
+      if (this.hasSettingUIFile) {
+        this.template('setting/_Setting.html', path.join(basePath, 'setting/Setting.html'));
+      }
+      if (this.hasSettingLocale) {
+        this.template('setting/nls/_strings.js', path.join(basePath, 'setting/nls/strings.js'));
+      }
+      if (this.hasSettingStyle) {
+        this.template('setting/css/_style.css', path.join(basePath, 'setting/css/style.css'));
+      }
+    }
   }
 });
 

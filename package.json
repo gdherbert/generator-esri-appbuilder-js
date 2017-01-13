@@ -1,8 +1,8 @@
 {
   "name": "generator-esri-appbuilder-js",
-  "version": "1.0.1",
+  "version": "2.1.1",
   "description": "Yeoman generator to help customize the ArcGIS Web AppBuilder",
-  "license": "Apache",
+  "license": "Apache-2.0",
   "main": "app/index.js",
   "repository": "Esri/generator-esri-appbuilder-js",
   "author": {
@@ -11,28 +11,32 @@
     "url": "https://github.com/tomwayson"
   },
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=0.12.0"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --timeout 10000"
   },
   "files": [
     "app",
-    "widget",
-    "theme"
+    "widget"
   ],
   "keywords": [
-    "yeoman-generator", "Esri", "ArcGIS", "Web", "AppBuilder"
+    "yeoman-generator",
+    "Esri",
+    "ArcGIS",
+    "Web",
+    "AppBuilder"
   ],
   "dependencies": {
-    "yeoman-generator": "~0.16.0",
-    "chalk": "~0.4.0",
-    "yosay": "^0.1.0"
+    "chalk": "^1.0.0",
+    "underscore.string": "^3.2.3",
+    "mkdirp": "^0.5.1",
+    "yeoman-generator": "^0.22.5",
+    "yosay": "^1.0.2"
   },
   "devDependencies": {
-    "mocha": "*"
-  },
-  "peerDependencies": {
-    "yo": ">=1.0.0"
+    "mocha": "*",
+    "yeoman-assert": "^2.0.0",
+    "yeoman-test": "^1.0.0"
   }
 }
